@@ -1,30 +1,73 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sionillo_lab3/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  Future<void> pumpApp(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const LoginRegisterApp());
+  }
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('shows application name, form labels, and owner info',
+      (tester) async {
+    await pumpApp(tester);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    expect(find.text('Lab Activity 3'), findsOneWidget);
+    expect(find.text('Welcome Back!'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('Your Name — Your Section'), findsOneWidget);
+    // The name field only appears on the registration form.
+    expect(find.text('Full Name'), findsNothing);
+  });
+
+  testWidgets('requires a password of at least eight characters',
+      (tester) async {
+    await pumpApp(tester);
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'a@b.com');
+    await tester.enterText(find.byType(TextFormField).at(1), '1234567');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Use at least 8 characters.'), findsOneWidget);
+  });
+
+  testWidgets('registration then login works', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('No account yet? Register'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create an Account'), findsOneWidget);
+    expect(find.text('Full Name'), findsOneWidget);
+    expect(find.text('Confirm Password'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Test User');
+    await tester.enterText(find.byType(TextFormField).at(1), 'test@example.com');
+    await tester.enterText(find.byType(TextFormField).at(2), 'password123');
+    await tester.enterText(find.byType(TextFormField).at(3), 'password123');
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Register'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registration successful! Please log in.'),
+        findsOneWidget);
+    expect(find.text('Welcome Back!'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'test@example.com');
+    await tester.enterText(find.byType(TextFormField).at(1), 'password123');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Welcome, Test User!'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Logout'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome Back!'), findsOneWidget);
   });
 }
